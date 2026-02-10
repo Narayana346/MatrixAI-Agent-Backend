@@ -1,0 +1,37 @@
+package com.workbuddy.matrix.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+import java.time.Instant;
+
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Table(name = "chart_session")
+public class ChartSession {
+
+    @Id
+    Long id;
+
+    Project project;
+
+    User user;
+
+    String title;
+
+    Instant createdAt;
+
+    Instant updatedAt;
+
+    Instant deletedAt; // soft delete
+
+
+}
