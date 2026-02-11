@@ -1,4 +1,8 @@
-package com.workbuddy.matrix.controller;
+package com.workbuddy.matrix.dto.auth;
 
-public record SignUpRequest() {
+public record SignUpRequest(
+        String email,
+        String name,
+        String password
+) {
 }

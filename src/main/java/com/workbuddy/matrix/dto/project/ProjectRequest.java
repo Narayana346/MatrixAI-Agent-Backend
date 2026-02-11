@@ -1,4 +1,4 @@
-package com.workbuddy.matrix.dto;
+package com.workbuddy.matrix.dto.project;
 
-public record ProjectRequest() {
+public record ProjectRequest(String name) {
 }

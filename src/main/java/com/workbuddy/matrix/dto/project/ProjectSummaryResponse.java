@@ -1,4 +1,11 @@
 package com.workbuddy.matrix.dto.project;
 
-public record ProjectSummaryResponse() {
+import java.time.Instant;
+
+public record ProjectSummaryResponse(
+        Long id,
+        String name,
+        Instant createdAt,
+        Instant updatedAt
+) {
 }

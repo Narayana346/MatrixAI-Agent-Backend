@@ -1,4 +1,4 @@
-package com.workbuddy.matrix.repository;
+package com.workbuddy.matrix.service;
 
 import com.workbuddy.matrix.dto.auth.UserProfileResponse;
 
