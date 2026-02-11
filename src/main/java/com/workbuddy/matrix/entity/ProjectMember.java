@@ -1,5 +1,6 @@
 package com.workbuddy.matrix.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workbuddy.matrix.enums.ProjectRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,11 +24,13 @@ public class ProjectMember {
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("projectId")
     @JoinColumn(name = "project_id")
+    @JsonIgnore
     Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("userId")
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     User user;
 
     ProjectRole role;

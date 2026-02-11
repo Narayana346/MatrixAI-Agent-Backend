@@ -1,5 +1,6 @@
 package com.workbuddy.matrix.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workbuddy.matrix.enums.MessageRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,14 +24,17 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_session_id")
+    @JsonIgnore
     ChatSession chatSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
+    @JsonIgnore
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
     String content;

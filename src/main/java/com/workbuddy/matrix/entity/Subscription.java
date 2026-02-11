@@ -1,5 +1,6 @@
 package com.workbuddy.matrix.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workbuddy.matrix.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,10 +27,12 @@ public class Subscription {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     User user;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plan_id")
+    @JsonIgnore
     Plan plan;
 
     SubscriptionStatus status;

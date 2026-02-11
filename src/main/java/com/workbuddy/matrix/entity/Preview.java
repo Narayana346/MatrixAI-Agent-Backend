@@ -1,5 +1,6 @@
 package com.workbuddy.matrix.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workbuddy.matrix.enums.PreviewStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,7 @@ public class Preview {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
+    @JsonIgnore
     Project project;
 
     String namespace; //k8s namespace
