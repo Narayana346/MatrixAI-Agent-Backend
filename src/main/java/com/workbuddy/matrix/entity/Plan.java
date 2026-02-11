@@ -1,11 +1,10 @@
 package com.workbuddy.matrix.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -17,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "plan")
 public class Plan {
     @Id
-    @Generated
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
     String name;
 
@@ -27,4 +26,7 @@ public class Plan {
     Integer maxPreview;
     Boolean unlimitedAi;
     Boolean active;
+
+    @OneToMany(mappedBy = "plan", fetch = FetchType.LAZY)
+    private List<Subscription> subscriptions;
 }

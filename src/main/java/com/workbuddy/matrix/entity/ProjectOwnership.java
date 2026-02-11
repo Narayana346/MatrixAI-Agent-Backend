@@ -1,11 +1,8 @@
 package com.workbuddy.matrix.entity;
 
-import com.workbuddy.matrix.enums.ProjectRole;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.Instant;
 
 @Entity
 @Getter
@@ -14,11 +11,11 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "project_member")
-public class ProjectMember {
+@Table(name = "project_ownership")
+public class ProjectOwnership {
 
     @EmbeddedId
-    ProjectMemberId id;
+    ProjectOwnershipId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("projectId")
@@ -29,10 +26,4 @@ public class ProjectMember {
     @MapsId("userId")
     @JoinColumn(name = "user_id")
     User user;
-
-    ProjectRole role;
-
-    Instant invitedAt;
-
-    Instant acceptedAt;
 }

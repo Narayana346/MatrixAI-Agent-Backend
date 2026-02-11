@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+
 import java.io.Serializable;
 
 @RequiredArgsConstructor
@@ -13,7 +14,7 @@ import java.io.Serializable;
 @EqualsAndHashCode
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Embeddable
-public class ProjectMemberId implements Serializable {
+public class ProjectOwnershipId implements Serializable {
 
     Long projectId;
     Long userId;

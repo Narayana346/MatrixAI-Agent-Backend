@@ -1,10 +1,9 @@
 package com.workbuddy.matrix.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
@@ -16,12 +15,17 @@ import java.time.Instant;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "user_log")
-public class UserLog {
+public class UsageLog {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
     Project project;
 
     String action;
@@ -32,5 +36,6 @@ public class UserLog {
 
     String metaData; // JSON of {model_used , prompt_used}
 
+    @CreationTimestamp
     Instant createdAt;
 }

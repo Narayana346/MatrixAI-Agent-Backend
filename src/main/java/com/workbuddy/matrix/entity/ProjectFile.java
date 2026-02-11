@@ -1,11 +1,11 @@
 package com.workbuddy.matrix.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.Instant;
 
@@ -19,21 +19,29 @@ import java.time.Instant;
 @Table(name = "project_file")
 public class ProjectFile {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
     Project project;
 
     String path;
 
     String minioObjectKey;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
     User createdBy;
 
-    User updateBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    User updatedBy;
 
+    @CreationTimestamp
     Instant createdAt;
 
+    @UpdateTimestamp
     Instant updatedAt;
 
 

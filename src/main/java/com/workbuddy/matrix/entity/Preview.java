@@ -1,11 +1,10 @@
 package com.workbuddy.matrix.entity;
 
 import com.workbuddy.matrix.enums.PreviewStatus;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
@@ -19,8 +18,11 @@ import java.time.Instant;
 @Table(name = "preview")
 public class Preview {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
     Project project;
 
     String namespace; //k8s namespace
@@ -35,5 +37,6 @@ public class Preview {
 
     Instant terminatedAt;
 
+    @CreationTimestamp
     Instant createdAt;
 }

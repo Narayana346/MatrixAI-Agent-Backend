@@ -4,8 +4,11 @@ import com.workbuddy.matrix.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Getter
@@ -18,10 +21,15 @@ import java.time.Instant;
 public class Subscription {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
-    @ManyToOne
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     User user;
-    @OneToOne
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id")
     Plan plan;
 
     SubscriptionStatus status;
@@ -36,7 +44,9 @@ public class Subscription {
 
     Boolean cancelAtPeriodEnd;
 
+    @CreationTimestamp
     Instant createdAt;
 
+    @UpdateTimestamp
     Instant updatedAt;
 }
