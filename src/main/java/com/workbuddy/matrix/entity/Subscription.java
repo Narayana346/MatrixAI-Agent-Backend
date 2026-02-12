@@ -27,14 +27,14 @@ public class Subscription {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @JsonIgnore
     User user;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plan_id")
-    @JsonIgnore
     Plan plan;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     SubscriptionStatus status;
 
     String stripeCustomerId;

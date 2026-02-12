@@ -24,17 +24,14 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_session_id")
-    @JsonIgnore
     ChatSession chatSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
-    @JsonIgnore
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @JsonIgnore
     private User user;
 
     String content;
@@ -43,6 +40,8 @@ public class ChatMessage {
 
     Integer tokenUsed;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     MessageRole role;
 
     Instant createdAt;

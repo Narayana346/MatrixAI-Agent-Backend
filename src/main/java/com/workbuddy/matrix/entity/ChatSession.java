@@ -24,12 +24,10 @@ public class ChatSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
-    @JsonIgnore
     Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @JsonIgnore
     User user;
 
     String title;
@@ -39,9 +37,5 @@ public class ChatSession {
     Instant updatedAt;
 
     Instant deletedAt; // soft delete
-
-    @OneToMany(mappedBy = "chatSession", fetch = FetchType.LAZY)
-    private List<ChatMessage> messages;
-
 
 }

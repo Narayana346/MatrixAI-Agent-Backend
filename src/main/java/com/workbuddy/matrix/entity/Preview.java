@@ -24,7 +24,6 @@ public class Preview {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
-    @JsonIgnore
     Project project;
 
     String namespace; //k8s namespace
@@ -33,6 +32,8 @@ public class Preview {
 
     String previewUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     PreviewStatus status;
 
     Instant startedAt;

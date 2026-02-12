@@ -22,17 +22,15 @@ public class ProjectMember {
     ProjectMemberId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("projectId")
-    @JoinColumn(name = "project_id")
-    @JsonIgnore
+    @JoinColumn(name = "project_id", insertable = false, updatable = false)
     Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("userId")
-    @JoinColumn(name = "user_id")
-    @JsonIgnore
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     User user;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     ProjectRole role;
 
     Instant invitedAt;

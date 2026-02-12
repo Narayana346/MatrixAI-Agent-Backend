@@ -34,37 +34,4 @@ public class User {
     Instant updatedAt;
 
     Instant deletedAt; // soft delete
-
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<Subscription> subscriptions;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<UsageLog> usageLogs;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectOwnership> projectOwnerships;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectMember> projectMemberships;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ChatSession> chatSessions;
-
-    @OneToMany(mappedBy = "createdBy", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectFile> filesCreated;
-
-    @OneToMany(mappedBy = "updatedBy", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectFile> filesUpdated;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ChatMessage> messages;
 }

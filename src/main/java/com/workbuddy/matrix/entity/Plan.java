@@ -26,7 +26,4 @@ public class Plan {
     Integer maxPreview;
     Boolean unlimitedAi;
     Boolean active;
-
-    @OneToMany(mappedBy = "plan", fetch = FetchType.LAZY)
-    private List<Subscription> subscriptions;
 }

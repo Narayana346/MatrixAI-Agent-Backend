@@ -13,11 +13,11 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "project")
+@AllArgsConstructor
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,9 +25,7 @@ public class Project {
 
     String name;
 
-    Long ownerId;
-
-    Boolean isPublic = false;
+    Boolean isPublic = Boolean.FALSE;
 
     @CreationTimestamp
     Instant createdAt;
@@ -37,30 +35,8 @@ public class Project {
 
     Instant deletedAt; // soft delete
 
-
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectOwnership> owners;
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectMember> members;
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ProjectFile> files;
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<Preview> previews;
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<ChatSession> chatSessions;
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<UsageLog> usageLogs;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    User owner;
 
 }
