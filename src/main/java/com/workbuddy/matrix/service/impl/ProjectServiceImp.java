@@ -1,6 +1,5 @@
 package com.workbuddy.matrix.service.impl;
 
-import com.workbuddy.matrix.dto.auth.UserProfileResponse;
 import com.workbuddy.matrix.dto.project.ProjectRequest;
 import com.workbuddy.matrix.dto.project.ProjectResponse;
 import com.workbuddy.matrix.dto.project.ProjectSummaryResponse;
@@ -52,13 +51,16 @@ public class ProjectServiceImp implements ProjectService {
 
     @Override
     public ProjectResponse getUserProjectById(Long id, Long userId) {
-        Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
+        Project project = projectRepository.findAccessibleByProjectId(id, userId).orElseThrow();
         return projectMapper.toProjectResponse(project);
     }
 
     @Override
     public ProjectResponse updateProject(Long id, ProjectRequest request, Long userId) {
-        Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
+        Project project = projectRepository.findAccessibleByProjectId(id, userId).orElseThrow();
+        if(!project.getOwner().getId().equals(userId)){
+            throw new RuntimeException("You are not allowed to update");
+        }
         project.setName(request.name());
         project =  projectRepository.save(project);
         return projectMapper.toProjectResponse(project);
@@ -66,7 +68,10 @@ public class ProjectServiceImp implements ProjectService {
 
     @Override
     public void softDelete(Long id, Long userId) {
-        Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
+        Project project = projectRepository.findAccessibleByProjectId(id, userId).orElseThrow();
+        if(!project.getOwner().getId().equals(userId)){
+            throw new RuntimeException("You are not allowed to delete");
+        }
         project.setDeletedAt(Instant.now());
         projectRepository.save(project);
     }
