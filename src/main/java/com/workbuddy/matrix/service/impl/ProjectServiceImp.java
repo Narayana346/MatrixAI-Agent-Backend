@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,23 +44,16 @@ public class ProjectServiceImp implements ProjectService {
 
     @Override
     public List<ProjectSummaryResponse> getUserProjects(Long userId) {
-        return projectRepository.findByOwnerId(userId)
+        return projectRepository.findAllAccessibleByUserId(userId)
                 .stream()
-                .map(project ->
-                        new ProjectSummaryResponse(project.getId(), project.getName(), project.getCreatedAt(), project.getUpdatedAt())
-                ).toList();
+                .map(project -> projectMapper.toProjectSummaryResponse(project))
+                .collect(Collectors.toList());
     }
 
     @Override
     public ProjectResponse getUserProjectById(Long id, Long userId) {
         Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
-        return new ProjectResponse(project.getId(), project.getName(), project.getCreatedAt(), project.getUpdatedAt(),
-                new UserProfileResponse(
-                        project.getOwner().getId(),
-                        project.getOwner().getEmail(),
-                        project.getOwner().getName(),
-                        project.getOwner().getAvatarUrl())
-        );
+        return projectMapper.toProjectResponse(project);
     }
 
     @Override
@@ -66,14 +61,13 @@ public class ProjectServiceImp implements ProjectService {
         Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
         project.setName(request.name());
         project =  projectRepository.save(project);
-        return new ProjectResponse(project.getId(), project.getName(), project.getCreatedAt(), project.getUpdatedAt(),
-                new UserProfileResponse(project.getOwner().getId(), project.getOwner().getEmail(), project.getOwner().getName(), project.getOwner().getAvatarUrl())
-        );
+        return projectMapper.toProjectResponse(project);
     }
 
     @Override
     public void softDelete(Long id, Long userId) {
-
-
+        Project project = projectRepository.findByIdAndOwnerId(id, userId).orElseThrow();
+        project.setDeletedAt(Instant.now());
+        projectRepository.save(project);
     }
 }
