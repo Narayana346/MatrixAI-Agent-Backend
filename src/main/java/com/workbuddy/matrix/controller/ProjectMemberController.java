@@ -2,7 +2,6 @@ package com.workbuddy.matrix.controller;
 
 import com.workbuddy.matrix.dto.member.InviteMemberRequest;
 import com.workbuddy.matrix.dto.member.MemberResponse;
-import com.workbuddy.matrix.entity.ProjectMember;
 import com.workbuddy.matrix.service.ProjectMemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,7 +18,7 @@ public class ProjectMemberController {
 
 
     @GetMapping
-    public ResponseEntity<List<ProjectMember>> getProjectMembers(@PathVariable Long projectId){
+    public ResponseEntity<List<MemberResponse>> getProjectMembers(@PathVariable Long projectId){
         Long userId = 1L;
         return ResponseEntity.ok(projectMemberService.getProjectMembers(projectId,userId));
     }
@@ -30,7 +29,7 @@ public class ProjectMemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(projectMemberService.inviteMember(projectId,inviteMemberRequest,userId));
     }
     @PatchMapping("/{memberId}")
-    public ResponseEntity<ProjectMemberService> updateMemberRole(
+    public ResponseEntity<MemberResponse> updateMemberRole(
             @PathVariable Long projectId,
             @PathVariable Long memberId,
             @RequestBody InviteMemberRequest request
@@ -44,7 +43,8 @@ public class ProjectMemberController {
             @PathVariable Long memberId
     ) {
         Long userId = 1L;
-        return ResponseEntity.ok(projectMemberService.deleteProjectMember(projectId, memberId, userId));
+        projectMemberService.deleteProjectMember(projectId, memberId, userId);
+        return ResponseEntity.noContent().build();
     }
 
 }

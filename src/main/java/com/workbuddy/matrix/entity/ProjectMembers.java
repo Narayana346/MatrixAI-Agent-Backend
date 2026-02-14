@@ -15,18 +15,18 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "project_member")
-public class ProjectMember {
+@Table(name = "project_members")
+public class ProjectMembers {
 
     @EmbeddedId
     ProjectMemberId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id", insertable = false, updatable = false)
+    @MapsId("projectId")
     Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @MapsId("userId")
     User user;
 
     @Enumerated(EnumType.STRING)
