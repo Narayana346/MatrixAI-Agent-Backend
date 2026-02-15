@@ -7,11 +7,11 @@ import com.workbuddy.matrix.entity.ProjectMembers;
 import java.util.List;
 
 public interface ProjectMemberService {
-    public List<MemberResponse> getProjectMembers(Long projectId, Long userId);
+    public List<MemberResponse> getProjectMembers(Long projectId);
 
-    public MemberResponse inviteMember(Long projectId, InviteMemberRequest inviteMemberRequest, Long userId);
+    public MemberResponse inviteMember(Long projectId, InviteMemberRequest inviteMemberRequest);
 
-    MemberResponse updateMemberRole(Long projectId, Long memberId, Long userId, InviteMemberRequest request);
+    MemberResponse updateMemberRole(Long projectId, Long memberId, InviteMemberRequest request);
 
-    void deleteProjectMember(Long projectId, Long memberId, Long userId);
+    void deleteProjectMember(Long projectId, Long memberId);
 }

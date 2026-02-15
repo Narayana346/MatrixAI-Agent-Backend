@@ -17,7 +17,13 @@ spring:
     max-lifetime: 1800000
     connection-timeout: 20000
 
+#
+#  sql:
+#    init:
+#      mode: always
+
   jpa:
+#    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -25,3 +31,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+
+jwt:
+  secret: r8vKz4XqT9mL2pQ7sW3eY6uI1oP5aD9fG7hJ2kL8zXcV4bNmQ1tR6yU3wE0iO9p
+  expiration: 86400

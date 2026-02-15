@@ -13,11 +13,16 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
 @Builder
-@FieldDefaults(level = AccessLevel.PRIVATE)
-@Table(name = "project")
+@NoArgsConstructor
 @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Table(name = "project",
+        indexes = {
+            @Index(name = "idx_project_updated_at_desc",columnList = "updated_at DESC , deleted_at"),
+            @Index(name = "idx_project_deleted_at",columnList = "deleted_at")
+        }
+)
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,9 +39,5 @@ public class Project {
     Instant updatedAt;
 
     Instant deletedAt; // soft delete
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id")
-    User owner;
 
 }
