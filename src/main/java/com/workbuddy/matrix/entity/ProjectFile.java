@@ -40,6 +40,7 @@ public class ProjectFile {
     User updatedBy;
 
     @CreationTimestamp
+    @Column(updatable = false,nullable = false)
     Instant createdAt;
 
     @UpdateTimestamp

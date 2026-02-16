@@ -5,6 +5,7 @@ import com.workbuddy.matrix.enums.MessageRole;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
@@ -22,27 +23,24 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_session_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumns({
+            @JoinColumn(name = "project_id",referencedColumnName = "project_id",nullable = false),
+            @JoinColumn(name = "user_id",referencedColumnName = "user_id",nullable = false)
+    })
     ChatSession chatSession;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    private Project project;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
-
+    @Column(columnDefinition = "text",nullable = false)
     String content;
 
     String toolCalls; // JSON Array Of Tools Called
 
-    Integer tokenUsed;
+    Integer tokenUsed = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     MessageRole role;
 
+    @CreationTimestamp
     Instant createdAt;
 }
