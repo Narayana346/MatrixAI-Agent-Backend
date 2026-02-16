@@ -26,7 +26,7 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrfConfig -> csrfConfig.disable())
             .sessionManagement(sessionConfig ->
                     sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth ->

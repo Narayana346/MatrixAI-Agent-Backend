@@ -16,6 +16,7 @@ import com.workbuddy.matrix.service.ProjectMemberService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +33,7 @@ public class ProjectMemberServiceImp implements ProjectMemberService {
     AuthUtil authUtil;
 
     @Override
+    @PreAuthorize("@security.canViewMembers(#projectId)")
     public List<MemberResponse> getProjectMembers(Long projectId) {
         return projectMembersRepository.findByIdProjectId(projectId)
                 .stream()
@@ -40,6 +42,7 @@ public class ProjectMemberServiceImp implements ProjectMemberService {
     }
 
     @Override
+    @PreAuthorize("@security.canManageMembers(#projectId)")
     public MemberResponse inviteMember(Long projectId, InviteMemberRequest inviteMemberRequest) {
         Long userId = authUtil.getCurrentUserId();
         Project project = getAccessibleProjectById(projectId,userId);
@@ -67,6 +70,7 @@ public class ProjectMemberServiceImp implements ProjectMemberService {
     }
 
     @Override
+    @PreAuthorize("@security.canManageMembers(#projectId)")
     public MemberResponse updateMemberRole(Long projectId, Long memberId, InviteMemberRequest request) {
         ProjectMemberId projectMemberId = new ProjectMemberId(projectId,memberId);
 
@@ -79,6 +83,7 @@ public class ProjectMemberServiceImp implements ProjectMemberService {
     }
 
     @Override
+    @PreAuthorize("@security.canManageMembers(#projectId)")
     public void deleteProjectMember(Long projectId, Long memberId) {
         ProjectMemberId projectMemberId = new ProjectMemberId(projectId,memberId);
 
