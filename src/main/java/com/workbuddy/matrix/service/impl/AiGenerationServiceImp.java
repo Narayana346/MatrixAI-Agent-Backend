@@ -1,8 +1,10 @@
 package com.workbuddy.matrix.service.impl;
 
-import aj.org.objectweb.asm.commons.Remapper;
+import com.workbuddy.matrix.llm.Prompt;
 import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.AiGenerationService;
+import com.workbuddy.matrix.service.ProjectFileService;
+import com.workbuddy.matrix.utility.ContentMatcher;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -11,10 +13,10 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-
+import reactor.core.scheduler.Schedulers;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
 
 @Service
 @Slf4j
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class AiGenerationServiceImp implements AiGenerationService {
     ChatClient chatClient;
     AuthUtil authUtil;
+    ProjectFileService projectFileService;
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
@@ -34,25 +37,26 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 "userId",userId,
                 "projectId",projectId
         );
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder fullResponseBuffer = new StringBuilder();
 
         return chatClient.prompt()
-                .system("SYSTEM_PROMPT_HERE")
+                .system(Prompt.CODE_GENERATION_SYSTEM_PROMPT)
                 .user(userMessage)
                 .advisors( advisorSpec -> {
                     advisorSpec.params(advisorsParams);
-                        }
-
-                )
+                })
                 .stream()
                 .chatResponse()
                 .doOnNext( chatResponse -> {
-                    stringBuilder.append(
-                            chatResponse.getResult().getOutput().getText()
-                    );
+                    log.info("Chat response: {}",chatResponse);
+                    String content = chatResponse.getResult().getOutput().getText();
+                    fullResponseBuffer.append(content);
                 })
                 .doOnComplete(() ->{
-
+                    // in here implement background thread as flux way ... but u can use Executor framework
+                    Schedulers.boundedElastic().schedule(() ->{
+                        parseAndSaveFile(fullResponseBuffer.toString(),projectId,userId);
+                    });
                 })
                 .doOnError(error -> {
                     log.error("Error during streaming for project",error);
@@ -62,6 +66,34 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 );
     }
 
+    private void parseAndSaveFile(String fullResponse, Long projectId , Long userId) {
+        // for reference
+//        String dummyFileContent = """
+//                <message>I'm going to read the files and generate the code</message>
+//                <file>path="src/App.jsx"
+//                import React from 'react';
+//                import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+//                import Home from './Home';
+//                import About from './About';
+//
+//                ......
+//
+//                </file>
+//                """;
+
+        Matcher fileMatcher = ContentMatcher.FILE_TAG_PATTERN.matcher(fullResponse);
+
+        while (fileMatcher.find()){
+            String filePath = fileMatcher.group(1);
+            String fileContent = fileMatcher.group(2).trim();
+
+            projectFileService.saveFile(userId,projectId,filePath,fileContent);
+
+        }
+
+    }
+
     private void createChatSessionIfNotExists(Long userId) {
+
     }
 }

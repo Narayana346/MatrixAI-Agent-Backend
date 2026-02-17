@@ -27,6 +27,7 @@ public class ProjectFile {
     @JoinColumn(name = "project_id")
     Project project;
 
+    @Column(nullable = false)
     String path;
 
     String minioObjectKey;

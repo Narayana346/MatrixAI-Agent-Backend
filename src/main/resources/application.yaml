@@ -34,13 +34,18 @@ spring:
 
   ai:
     openai:
-      api-key:
+      api-key: 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
       base-url: https://openrouter.ai/api
       chat:
         options:
           model: qwen/qwen3-coder:free
           temperature: 0.0
 
+minio:
+  endpoint: http://100.124.129.13:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket: matrix
 
 jwt:
   secret: r8vKz4XqT9mL2pQ7sW3eY6uI1oP5aD9fG7hJ2kL8zXcV4bNmQ1tR6yU3wE0iO9p

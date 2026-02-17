@@ -24,7 +24,7 @@ public class ChatController {
     public Flux<ServerSentEvent<String>> streamChat(@RequestBody @Valid ChatRequest request){
         return aiGenerationService.stremResponse(request.message(),request.projectId())
                 .map(data -> ServerSentEvent
-                        .builder()
+                        .<String>builder()
                         .data(data)
                         .build()
                 );

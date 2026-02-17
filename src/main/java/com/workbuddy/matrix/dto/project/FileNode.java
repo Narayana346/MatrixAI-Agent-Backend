@@ -1,9 +1,8 @@
 package com.workbuddy.matrix.dto.project;
 
+import java.time.Instant;
+
 public record FileNode(
-        String path,
-        String modifiedAt,
-        Long size,
-        String type
+        String path
 ) {
 }
