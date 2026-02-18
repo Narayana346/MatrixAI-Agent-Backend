@@ -10,7 +10,9 @@ import com.workbuddy.matrix.mapper.ProjectFileMapper;
 import com.workbuddy.matrix.repository.ProjectFileRepository;
 import com.workbuddy.matrix.repository.ProjectRepository;
 import com.workbuddy.matrix.repository.UserRepository;
+import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.ProjectFileService;
+import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.AccessLevel;
@@ -36,19 +38,32 @@ public class ProjectFileServiceImp implements ProjectFileService {
     private final ProjectRepository projectRepository;
     private final MinioClient minioClient;
     private final ProjectFileMapper projectFileMapper;
+    private final AuthUtil authUtil;
 
     @Value("${minio.bucket}")
     private String bucketName;
 
     @Override
-    public List<FileNode> getFileTree(Long projectId, Long userId) {
+    public List<FileNode> getFileTree(Long projectId) {
         List<ProjectFile> projectFiles = projectFileRepository.findByProjectId(projectId);
         return projectFileMapper.toListOfFileNode(projectFiles);
     }
 
     @Override
-    public FileContentResponse getFileContent(Long projectId, String path, Long userId) {
-        return null;
+    public FileContentResponse getFileContent(Long projectId, String path) {
+        String objectKey = String.format("%s/%s",projectId,path);
+        try{
+            InputStream fileContentStream = minioClient.getObject(GetObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectKey)
+                    .build()
+            );
+            String fileContent = new String(fileContentStream.readAllBytes(),StandardCharsets.UTF_8);
+            return new FileContentResponse(path,fileContent);
+        }catch (Exception exception){
+            log.error("Failed to get file content for project {} and path {}",projectId,path,exception);
+            throw new RuntimeException("Failed to get file content",exception);
+        }
     }
 
     @Override

@@ -15,6 +15,7 @@ import com.workbuddy.matrix.repository.ProjectRepository;
 import com.workbuddy.matrix.repository.UserRepository;
 import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.ProjectService;
+import com.workbuddy.matrix.service.ProjectTemplateService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +36,9 @@ public class ProjectServiceImp implements ProjectService {
     ProjectRepository projectRepository;
     UserRepository userRepository;
     ProjectMapper projectMapper;
-    private final ProjectMembersRepository projectMembersRepository;
-    private final AuthUtil authUtil;
+    ProjectMembersRepository projectMembersRepository;
+    ProjectTemplateService projectTemplateService;
+    AuthUtil authUtil;
 
     @Override
     public ProjectResponse createProject(ProjectRequest request) {
@@ -59,6 +61,8 @@ public class ProjectServiceImp implements ProjectService {
                 .project(project)
                 .build();
         projectMembersRepository.save(projectMembers);
+
+        projectTemplateService.initializeProjectTemplate(project.getId());
         return projectMapper.toProjectResponse(project);
     }
 
