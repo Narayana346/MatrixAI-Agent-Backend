@@ -1,21 +1,33 @@
 package com.workbuddy.matrix.service.impl;
 
+import com.workbuddy.matrix.entity.ChatEvent;
+import com.workbuddy.matrix.entity.ChatMessage;
+import com.workbuddy.matrix.entity.ChatSession;
+import com.workbuddy.matrix.enums.ChatEventType;
+import com.workbuddy.matrix.enums.MessageRole;
+import com.workbuddy.matrix.llm.LLMResponseParser;
 import com.workbuddy.matrix.llm.Prompt;
 import com.workbuddy.matrix.llm.advisors.FileTreeContextAdvisor;
 import com.workbuddy.matrix.llm.tool.CodeGenerationTool;
+import com.workbuddy.matrix.repository.ChatEventRepository;
+import com.workbuddy.matrix.repository.ChatMessageRepository;
 import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.AiGenerationService;
 import com.workbuddy.matrix.service.ProjectFileService;
+import com.workbuddy.matrix.service.UsageService;
 import com.workbuddy.matrix.utility.ContentMatcher;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -29,6 +41,9 @@ public class AiGenerationServiceImp implements AiGenerationService {
     AuthUtil authUtil;
     ProjectFileService projectFileService;
     FileTreeContextAdvisor fileTreeContextAdvisor;
+    ChatMessageRepository chatMessageRepository;
+    ChatEventRepository chatEventRepository;
+    UsageService usageService;
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
@@ -94,6 +109,48 @@ public class AiGenerationServiceImp implements AiGenerationService {
 
         }
 
+    }
+
+    private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage,Long userId) {
+        Long projectId = chatSession.getProject().getId();
+
+        if(usage != null) {
+            int totalTokens = usage.getTotalTokens();
+            usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
+        }
+
+        // Save the User message
+        chatMessageRepository.save(
+                ChatMessage.builder()
+                        .chatSession(chatSession)
+                        .role(MessageRole.USER)
+                        .content(userMessage)
+                        .tokenUsed(usage.getPromptTokens())
+                        .build()
+        );
+
+        ChatMessage assistantChatMessage = ChatMessage.builder()
+                .role(MessageRole.ASSISTANT)
+                .content("Assistant Message here...")
+                .chatSession(chatSession)
+                .tokenUsed(usage.getCompletionTokens())
+                .build();
+
+        assistantChatMessage = chatMessageRepository.save(assistantChatMessage);
+
+        List<ChatEvent> chatEventList = LLMResponseParser.parseChatEvents(fullText, assistantChatMessage);
+        chatEventList.addFirst(ChatEvent.builder()
+                .eventType(ChatEventType.THOUGHT)
+                .chatMessage(assistantChatMessage)
+                .content("Thought for "+duration+"s")
+                .sequenceOrder(0)
+                .build());
+
+        chatEventList.stream()
+                .filter(event -> event.getEventType() == ChatEventType.FILE_EDIT)
+                .forEach(event -> projectFileService.saveFile(userId,projectId, event.getFilePath(), event.getContent()));
+
+        chatEventRepository.saveAll(chatEventList);
     }
 
     private void createChatSessionIfNotExists(Long userId) {

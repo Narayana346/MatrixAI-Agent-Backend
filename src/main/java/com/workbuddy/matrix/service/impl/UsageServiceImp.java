@@ -30,4 +30,9 @@ public class UsageServiceImp implements UsageService {
     public PlanLimitsResponse getCurrentSubscriptionLimitsOfUser(Long userid) {
         return null;
     }
+
+    @Override
+    public void recordTokenUsage(Long id, int totalTokens) {
+
+    }
 }

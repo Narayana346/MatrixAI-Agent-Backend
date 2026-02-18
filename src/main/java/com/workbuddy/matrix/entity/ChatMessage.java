@@ -1,6 +1,5 @@
 package com.workbuddy.matrix.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workbuddy.matrix.enums.MessageRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,6 +7,7 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Getter
@@ -30,8 +30,8 @@ public class ChatMessage {
     })
     ChatSession chatSession;
 
-    @Column(columnDefinition = "text",nullable = false)
-    String content;
+    @Column(columnDefinition = "text")
+    String content; // null unless User role
 
     String toolCalls; // JSON Array Of Tools Called
 
@@ -39,7 +39,14 @@ public class ChatMessage {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    MessageRole role;
+    MessageRole role;  // User or ASSISTANT
+
+    @OneToMany(mappedBy = "chatMessage",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    @OrderBy("sequenceOrder ASC")
+    List<ChatEvent> events; // null unless ASSISTANT role
 
     @CreationTimestamp
     Instant createdAt;
