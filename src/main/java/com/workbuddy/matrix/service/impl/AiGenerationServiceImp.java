@@ -1,6 +1,8 @@
 package com.workbuddy.matrix.service.impl;
 
 import com.workbuddy.matrix.llm.Prompt;
+import com.workbuddy.matrix.llm.advisors.FileTreeContextAdvisor;
+import com.workbuddy.matrix.llm.tool.CodeGenerationTool;
 import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.AiGenerationService;
 import com.workbuddy.matrix.service.ProjectFileService;
@@ -26,6 +28,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
     ChatClient chatClient;
     AuthUtil authUtil;
     ProjectFileService projectFileService;
+    FileTreeContextAdvisor fileTreeContextAdvisor;
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
@@ -39,11 +42,15 @@ public class AiGenerationServiceImp implements AiGenerationService {
         );
         StringBuilder fullResponseBuffer = new StringBuilder();
 
+        CodeGenerationTool codeGenerationTool = new CodeGenerationTool(projectFileService,projectId);
+
         return chatClient.prompt()
                 .system(Prompt.CODE_GENERATION_SYSTEM_PROMPT)
                 .user(userMessage)
+                .tools(codeGenerationTool)
                 .advisors( advisorSpec -> {
                     advisorSpec.params(advisorsParams);
+                    advisorSpec.advisors(fileTreeContextAdvisor);
                 })
                 .stream()
                 .chatResponse()
@@ -54,13 +61,9 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 })
                 .doOnComplete(() ->{
                     // in here implement background thread as flux way ... but u can use Executor framework
-                    Schedulers.boundedElastic().schedule(() ->{
-                        parseAndSaveFile(fullResponseBuffer.toString(),projectId,userId);
-                    });
+                    Schedulers.boundedElastic().schedule(() -> parseAndSaveFile(fullResponseBuffer.toString(),projectId,userId));
                 })
-                .doOnError(error -> {
-                    log.error("Error during streaming for project",error);
-                })
+                .doOnError(error -> log.error("Error during streaming for project",error))
                 .map(chatResponse -> Objects.requireNonNull(
                         chatResponse.getResult().getOutput().getText())
                 );
