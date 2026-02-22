@@ -8,24 +8,22 @@ import com.workbuddy.matrix.repository.ProjectRepository;
 import com.workbuddy.matrix.service.ProjectTemplateService;
 import io.minio.*;
 import io.minio.messages.Item;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 @RequiredArgsConstructor
-@Slf4j
-@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 @Service
+@Slf4j
 public class ProjectTemplateServiceImpl implements ProjectTemplateService {
-    MinioClient minioClient;
-    ProjectFileRepository projectFileRepository;
-    ProjectRepository projectRepository;
 
+    private final MinioClient minioClient;
+    private final ProjectFileRepository projectFileRepository;
+    private final ProjectRepository projectRepository;
 
     private static final String TEMPLATE_BUCKET = "project-template";
     private static final String TARGET_BUCKET = "matrix";
@@ -39,25 +37,28 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 
         // copy the template files to the project bucket
 
-        try{
-            Iterable<Result<Item>> objects = minioClient.listObjects(
+        try {
+            Iterable<Result<Item>> results = minioClient.listObjects(
                     ListObjectsArgs.builder()
                             .bucket(TEMPLATE_BUCKET)
-                            .prefix(TEMPLATE_NAME)
+                            .prefix(TEMPLATE_NAME + "/")
+                            .recursive(true)
                             .build()
             );
 
-            List<ProjectFile> fileToSave = new ArrayList<>();
+            List<ProjectFile> filesToSave = new ArrayList<>(); // for metadata in postgres db
 
-            for(Result<Item> result : objects){
+            for (Result<Item> result : results) {
                 Item item = result.get();
                 String sourceKey = item.objectName();
-                String cleanPath = sourceKey.replace(TEMPLATE_NAME +"/","");
-                String destinationKey = String.format("%s/%s",project.getId(),cleanPath);
 
-                minioClient.copyObject(CopyObjectArgs.builder()
+                String cleanPath = sourceKey.replaceFirst(TEMPLATE_NAME + "/", "");
+                String destKey = projectId + "/" + cleanPath;
+
+                minioClient.copyObject(
+                        CopyObjectArgs.builder()
                                 .bucket(TARGET_BUCKET)
-                                .object(destinationKey)
+                                .object(destKey)
                                 .source(
                                         CopySource.builder()
                                                 .bucket(TEMPLATE_BUCKET)
@@ -67,18 +68,22 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
                                 .build()
                 );
 
-                ProjectFile projectFile = ProjectFile.builder()
+                ProjectFile pf = ProjectFile.builder()
                         .project(project)
                         .path(cleanPath)
-                        .minioObjectKey(destinationKey)
+                        .minioObjectKey(destKey)
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
                         .build();
-                fileToSave.add(projectFile);
-            }
-            projectFileRepository.saveAll(fileToSave);
 
-        }catch (Exception exception){
-            log.error("Failed to initialize project template for project {}",projectId,exception);
-            throw new RuntimeException("Failed to initialize project template",exception);
+                filesToSave.add(pf);
+            }
+
+            projectFileRepository.saveAll(filesToSave);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize project from template", e);
         }
+
     }
 }

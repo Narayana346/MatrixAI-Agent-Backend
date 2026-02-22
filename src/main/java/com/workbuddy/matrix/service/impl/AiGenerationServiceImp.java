@@ -1,16 +1,14 @@
 package com.workbuddy.matrix.service.impl;
 
-import com.workbuddy.matrix.entity.ChatEvent;
-import com.workbuddy.matrix.entity.ChatMessage;
-import com.workbuddy.matrix.entity.ChatSession;
+import com.workbuddy.matrix.entity.*;
 import com.workbuddy.matrix.enums.ChatEventType;
 import com.workbuddy.matrix.enums.MessageRole;
+import com.workbuddy.matrix.error.ResourceNotFoundException;
 import com.workbuddy.matrix.llm.LLMResponseParser;
 import com.workbuddy.matrix.llm.Prompt;
 import com.workbuddy.matrix.llm.advisors.FileTreeContextAdvisor;
 import com.workbuddy.matrix.llm.tool.CodeGenerationTool;
-import com.workbuddy.matrix.repository.ChatEventRepository;
-import com.workbuddy.matrix.repository.ChatMessageRepository;
+import com.workbuddy.matrix.repository.*;
 import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.AiGenerationService;
 import com.workbuddy.matrix.service.ProjectFileService;
@@ -30,6 +28,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 
 @Service
@@ -43,13 +42,16 @@ public class AiGenerationServiceImp implements AiGenerationService {
     FileTreeContextAdvisor fileTreeContextAdvisor;
     ChatMessageRepository chatMessageRepository;
     ChatEventRepository chatEventRepository;
+    ChatSessionRepository chatSessionRepository;
+    UserRepository userRepository;
+    ProjectRepository projectRepository;
     UsageService usageService;
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
     public Flux<String> stremResponse(String userMessage, Long projectId) {
         Long userId = authUtil.getCurrentUserId();
-        createChatSessionIfNotExists(userId);
+        ChatSession chatSession = createChatSessionIfNotExists(userId,projectId);
 
         Map<String,Object> advisorsParams = Map.of(
                 "userId",userId,
@@ -58,6 +60,10 @@ public class AiGenerationServiceImp implements AiGenerationService {
         StringBuilder fullResponseBuffer = new StringBuilder();
 
         CodeGenerationTool codeGenerationTool = new CodeGenerationTool(projectFileService,projectId);
+
+        AtomicReference<Long> startTime = new AtomicReference<>(System.currentTimeMillis());
+        AtomicReference<Long> endTime = new AtomicReference<>(0L);
+        AtomicReference<Usage> usageRef = new AtomicReference<>();
 
         return chatClient.prompt()
                 .system(Prompt.CODE_GENERATION_SYSTEM_PROMPT)
@@ -72,11 +78,24 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 .doOnNext( chatResponse -> {
                     log.info("Chat response: {}",chatResponse);
                     String content = chatResponse.getResult().getOutput().getText();
+                    if(content != null && !content.isEmpty() && endTime.get() == 0) { // first non-empty chunk received
+                        endTime.set(System.currentTimeMillis());
+                    }
+
+                    if(chatResponse.getMetadata().getUsage() != null) {
+                        usageRef.set(chatResponse.getMetadata().getUsage());
+                    }
+
+                    fullResponseBuffer.append(content);
                     fullResponseBuffer.append(content);
                 })
                 .doOnComplete(() ->{
                     // in here implement background thread as flux way ... but u can use Executor framework
-                    Schedulers.boundedElastic().schedule(() -> parseAndSaveFile(fullResponseBuffer.toString(),projectId,userId));
+                    Schedulers.boundedElastic().schedule(() -> {
+
+                        long duration = (endTime.get() - startTime.get()) /  1000;
+                        finalizeChats(userMessage, chatSession, fullResponseBuffer.toString(),duration,usageRef.get(),projectId,userId);
+                    });
                 })
                 .doOnError(error -> log.error("Error during streaming for project",error))
                 .map(chatResponse -> Objects.requireNonNull(
@@ -111,13 +130,11 @@ public class AiGenerationServiceImp implements AiGenerationService {
 
     }
 
-    private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage,Long userId) {
-        Long projectId = chatSession.getProject().getId();
-
-        if(usage != null) {
-            int totalTokens = usage.getTotalTokens();
-            usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
-        }
+    private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage,Long projectId,Long userId) {
+//        if(usage != null) {
+//            int totalTokens = usage.getTotalTokens();
+//            usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
+//        }
 
         // Save the User message
         chatMessageRepository.save(
@@ -153,7 +170,26 @@ public class AiGenerationServiceImp implements AiGenerationService {
         chatEventRepository.saveAll(chatEventList);
     }
 
-    private void createChatSessionIfNotExists(Long userId) {
+    private ChatSession createChatSessionIfNotExists(Long userId, Long projectId) {
+        ChatSessionId chatSessionId = new ChatSessionId(projectId,userId);
+        ChatSession chatSession = chatSessionRepository.findById(chatSessionId).orElse(null);
+        if(chatSession == null){
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project",projectId.toString()));
 
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User",userId.toString()));
+
+            chatSession = ChatSession.builder()
+                    .id(chatSessionId)
+                    .project(project)
+                    .user(user)
+                    .build();
+
+           chatSession = chatSessionRepository.save(chatSession);
+
+        }
+
+        return chatSession;
     }
 }
