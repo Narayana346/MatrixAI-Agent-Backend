@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 @Component
 @Slf4j
 public class LLMResponseParser {
-    public static List<ChatEvent> parseChatEvents(String fullResponse,ChatMessage chatMessage){
+    public  List<ChatEvent> parseChatEvents(String fullResponse,ChatMessage chatMessage){
         List<ChatEvent> events = new ArrayList<>();
         int sequenceOrder = 1;
 

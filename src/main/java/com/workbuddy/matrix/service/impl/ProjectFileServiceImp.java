@@ -38,7 +38,6 @@ public class ProjectFileServiceImp implements ProjectFileService {
     private final ProjectRepository projectRepository;
     private final MinioClient minioClient;
     private final ProjectFileMapper projectFileMapper;
-    private final AuthUtil authUtil;
 
     @Value("${minio.bucket}")
     private String bucketName;
@@ -51,7 +50,7 @@ public class ProjectFileServiceImp implements ProjectFileService {
 
     @Override
     public FileContentResponse getFileContent(Long projectId, String path) {
-        String objectKey = String.format("%s/%s",projectId,path);
+        String objectKey = projectId + "/" + path;
         try{
             InputStream fileContentStream = minioClient.getObject(GetObjectArgs.builder()
                     .bucket(bucketName)
@@ -70,8 +69,6 @@ public class ProjectFileServiceImp implements ProjectFileService {
     public void saveFile(Long projectId, String filePath, String fileContent) {
         // Save the file Metadata in postgres and save file content in minio .
         log.info("Saving file {} for project {}",filePath,projectId);
-        Long userId = authUtil.getCurrentUserId();
-        User user = userRepository.getReferenceById(userId);
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found",projectId.toString()));
 
@@ -96,12 +93,10 @@ public class ProjectFileServiceImp implements ProjectFileService {
                     .project(project)
                     .path(cleanPath)
                     .minioObjectKey(objectKey)
-                    .createdBy(user)
                     .createdAt(Instant.now())
                     .build()
             );
 
-            projectFile.setUpdatedBy(user);
             projectFile.setUpdatedAt(Instant.now());
             projectFileRepository.save(projectFile);
 

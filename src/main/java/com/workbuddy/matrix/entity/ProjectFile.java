@@ -24,21 +24,13 @@ public class ProjectFile {
     Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
+    @JoinColumn(name = "project_id", nullable = false)
     Project project;
 
     @Column(nullable = false)
     String path;
 
     String minioObjectKey;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    User createdBy;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "updated_by")
-    User updatedBy;
 
     @CreationTimestamp
     @Column(updatable = false,nullable = false)

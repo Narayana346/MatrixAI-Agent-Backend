@@ -13,7 +13,6 @@ import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.AiGenerationService;
 import com.workbuddy.matrix.service.ProjectFileService;
 import com.workbuddy.matrix.service.UsageService;
-import com.workbuddy.matrix.utility.ContentMatcher;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -24,12 +23,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
 
 @Service
 @Slf4j
@@ -46,6 +43,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
     UserRepository userRepository;
     ProjectRepository projectRepository;
     UsageService usageService;
+    LLMResponseParser llmResponseParser;
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
@@ -94,7 +92,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
                     Schedulers.boundedElastic().schedule(() -> {
 
                         long duration = (endTime.get() - startTime.get()) /  1000;
-                        finalizeChats(userMessage, chatSession, fullResponseBuffer.toString(),duration,usageRef.get(),projectId,userId);
+                        finalizeChats(userMessage, chatSession, fullResponseBuffer.toString(),duration,usageRef.get());
                     });
                 })
                 .doOnError(error -> log.error("Error during streaming for project",error))
@@ -103,7 +101,9 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 );
     }
 
-    private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage,Long projectId,Long userId) {
+    private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage) {
+        Long projectId = chatSession.getProject().getId();
+
         if(usage != null) {
             int totalTokens = usage.getTotalTokens();
             usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
@@ -115,7 +115,8 @@ public class AiGenerationServiceImp implements AiGenerationService {
                         .chatSession(chatSession)
                         .role(MessageRole.USER)
                         .content(userMessage)
-                        .tokenUsed(usage.getPromptTokens())
+                        .chatSession(chatSession)
+                        .tokenUsed(Objects.requireNonNull(usage).getPromptTokens())
                         .build()
         );
 
@@ -128,7 +129,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
 
         assistantChatMessage = chatMessageRepository.save(assistantChatMessage);
 
-        List<ChatEvent> chatEventList = LLMResponseParser.parseChatEvents(fullText, assistantChatMessage);
+        List<ChatEvent> chatEventList = llmResponseParser.parseChatEvents(fullText, assistantChatMessage);
         chatEventList.addFirst(ChatEvent.builder()
                 .eventType(ChatEventType.THOUGHT)
                 .chatMessage(assistantChatMessage)
