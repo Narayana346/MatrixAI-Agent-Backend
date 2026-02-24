@@ -103,38 +103,11 @@ public class AiGenerationServiceImp implements AiGenerationService {
                 );
     }
 
-    private void parseAndSaveFile(String fullResponse, Long projectId , Long userId) {
-        // for reference
-//        String dummyFileContent = """
-//                <message>I'm going to read the files and generate the code</message>
-//                <file>path="src/App.jsx"
-//                import React from 'react';
-//                import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-//                import Home from './Home';
-//                import About from './About';
-//
-//                ......
-//
-//                </file>
-//                """;
-
-        Matcher fileMatcher = ContentMatcher.FILE_TAG_PATTERN.matcher(fullResponse);
-
-        while (fileMatcher.find()){
-            String filePath = fileMatcher.group(1);
-            String fileContent = fileMatcher.group(2).trim();
-
-            projectFileService.saveFile(userId,projectId,filePath,fileContent);
-
-        }
-
-    }
-
     private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage,Long projectId,Long userId) {
-//        if(usage != null) {
-//            int totalTokens = usage.getTotalTokens();
-//            usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
-//        }
+        if(usage != null) {
+            int totalTokens = usage.getTotalTokens();
+            usageService.recordTokenUsage(chatSession.getUser().getId(), totalTokens);
+        }
 
         // Save the User message
         chatMessageRepository.save(
@@ -165,7 +138,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
 
         chatEventList.stream()
                 .filter(event -> event.getEventType() == ChatEventType.FILE_EDIT)
-                .forEach(event -> projectFileService.saveFile(userId,projectId, event.getFilePath(), event.getContent()));
+                .forEach(event -> projectFileService.saveFile(projectId, event.getFilePath(), event.getContent()));
 
         chatEventRepository.saveAll(chatEventList);
     }

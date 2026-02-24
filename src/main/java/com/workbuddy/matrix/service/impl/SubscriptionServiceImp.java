@@ -4,6 +4,7 @@ import com.workbuddy.matrix.dto.subscription.*;
 import com.workbuddy.matrix.entity.Plan;
 import com.workbuddy.matrix.entity.Subscription;
 import com.workbuddy.matrix.repository.SubscriptionRepository;
+import com.workbuddy.matrix.security.AuthUtil;
 import com.workbuddy.matrix.service.SubscriptionService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +19,11 @@ import java.time.Instant;
 public class SubscriptionServiceImp implements SubscriptionService {
 
     SubscriptionRepository subscriptionRepository;
+    AuthUtil authUtil;
 
     @Override
-    public SubscriptionResponse getCurrentSubscription(Long userId) {
+    public SubscriptionResponse getCurrentSubscription() {
+        Long userId = authUtil.getCurrentUserId();
         Subscription subscription = subscriptionRepository.findByUserId(userId).orElseThrow(() -> new RuntimeException("Subscription not found"));
         Plan plan = subscription.getPlan();
         return new SubscriptionResponse(new PlanResponse(plan.getId(), plan.getName(), plan.getMaxProject(), plan.getMaxTokenPerDay(), plan.getUnlimitedAi(), plan.getStripePriceId()),
@@ -28,12 +31,12 @@ public class SubscriptionServiceImp implements SubscriptionService {
     }
 
     @Override
-    public CheckOutResponse createCheckOutSessionUrl(CheckOutRequest request, Long userId) {
+    public CheckOutResponse createCheckOutSessionUrl(CheckOutRequest request) {
         return null;
     }
 
     @Override
-    public PortalResponse openCustomerPortal(Long userId) {
+    public PortalResponse openCustomerPortal() {
         return null;
     }
 }

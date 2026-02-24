@@ -10,5 +10,5 @@ public interface ProjectFileService {
 
     FileContentResponse getFileContent(Long projectId, String path);
 
-    void saveFile(Long userId,Long projectId, String filePath, String fileContent);
+    void saveFile(Long projectId, String filePath, String fileContent);
 }

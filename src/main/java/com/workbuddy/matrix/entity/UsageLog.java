@@ -7,6 +7,7 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -21,22 +22,11 @@ public class UsageLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    User user;
+    @Column(name = "user_id", nullable = false)
+    Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    Project project;
+    @Column(nullable = false)
+    LocalDate date;
 
-    String action;
-
-    Integer tokenUsed;
-
-    Integer durationMs;
-
-    String metaData; // JSON of {model_used , prompt_used}
-
-    @CreationTimestamp
-    Instant createdAt;
+    Integer tokensUsed;
 }

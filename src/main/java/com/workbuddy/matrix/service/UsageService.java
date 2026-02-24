@@ -4,9 +4,8 @@ import com.workbuddy.matrix.dto.subscription.PlanLimitsResponse;
 import com.workbuddy.matrix.dto.subscription.UsageTodayResponse;
 
 public interface UsageService {
-    UsageTodayResponse getTodayUsageOfUser(Long userId);
 
     PlanLimitsResponse getCurrentSubscriptionLimitsOfUser(Long userid);
-
-    void recordTokenUsage(Long id, int totalTokens);
+    void recordTokenUsage(Long userId, int totalTokens);
+    void checkDailyTokensUsage();
 }

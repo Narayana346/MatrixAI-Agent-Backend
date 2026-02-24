@@ -6,9 +6,9 @@ import com.workbuddy.matrix.dto.subscription.PortalResponse;
 import com.workbuddy.matrix.dto.subscription.SubscriptionResponse;
 
 public interface SubscriptionService {
-    SubscriptionResponse getCurrentSubscription(Long userId);
+    SubscriptionResponse getCurrentSubscription();
 
-    CheckOutResponse createCheckOutSessionUrl(CheckOutRequest request, Long userId);
+    CheckOutResponse createCheckOutSessionUrl(CheckOutRequest request);
 
-    PortalResponse openCustomerPortal(Long userId);
+    PortalResponse openCustomerPortal();
 }

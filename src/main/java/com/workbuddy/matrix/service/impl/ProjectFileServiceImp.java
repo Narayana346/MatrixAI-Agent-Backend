@@ -67,10 +67,10 @@ public class ProjectFileServiceImp implements ProjectFileService {
     }
 
     @Override
-    public void saveFile(Long userId,Long projectId, String filePath, String fileContent) {
+    public void saveFile(Long projectId, String filePath, String fileContent) {
         // Save the file Metadata in postgres and save file content in minio .
         log.info("Saving file {} for project {}",filePath,projectId);
-
+        Long userId = authUtil.getCurrentUserId();
         User user = userRepository.getReferenceById(userId);
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found",projectId.toString()));
