@@ -38,7 +38,7 @@ spring:
       base-url: https://openrouter.ai/api
       chat:
         options:
-          model: qwen/qwen3-coder:free
+          model: qwen/qwen3-235b-a22b-thinking-2507
           temperature: 0.0
 
 minio:
