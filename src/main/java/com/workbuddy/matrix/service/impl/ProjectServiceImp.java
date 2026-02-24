@@ -8,6 +8,7 @@ import com.workbuddy.matrix.entity.ProjectMemberId;
 import com.workbuddy.matrix.entity.ProjectMembers;
 import com.workbuddy.matrix.entity.User;
 import com.workbuddy.matrix.enums.ProjectRole;
+import com.workbuddy.matrix.error.BadRequestException;
 import com.workbuddy.matrix.error.ResourceNotFoundException;
 import com.workbuddy.matrix.mapper.ProjectMapper;
 import com.workbuddy.matrix.repository.ProjectMembersRepository;
@@ -71,15 +72,18 @@ public class ProjectServiceImp implements ProjectService {
         Long userId = authUtil.getCurrentUserId();
         return projectRepository.findAllAccessibleByUserId(userId)
                 .stream()
-                .map(projectMapper::toProjectSummaryResponse)
+                .map(projectWithRole ->
+                        projectMapper.toProjectSummaryResponse(projectWithRole.getProject(),projectWithRole.getRole()))
                 .collect(Collectors.toList());
     }
 
     @Override
     @PreAuthorize("@security.canViewProject(#projectId)")
-    public ProjectResponse getUserProjectById(Long projectId) {
-        Project project = getAccessibleByProjectId(projectId);
-        return projectMapper.toProjectResponse(project);
+    public ProjectSummaryResponse getUserProjectById(Long projectId) {
+        Long userId = authUtil.getCurrentUserId();
+        var projectWithRole = projectRepository.findAccessibleByProjectIdWithRole(projectId,userId)
+                .orElseThrow(() -> new BadRequestException("Project not found"));
+        return projectMapper.toProjectSummaryResponse(projectWithRole.getProject(),projectWithRole.getRole());
     }
 
     @Override

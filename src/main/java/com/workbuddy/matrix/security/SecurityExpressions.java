@@ -23,7 +23,6 @@ public class SecurityExpressions {
     }
 
     public boolean canDeleteProject(Long projectId){
-        long userId = authUtil.getCurrentUserId();
         return hasPermission(projectId,ProjectPermission.DELETE);
     }
     public boolean canManageMembers(Long projectId){

@@ -2,6 +2,7 @@ package com.workbuddy.matrix.service.impl;
 
 import com.workbuddy.matrix.dto.project.FileContentResponse;
 import com.workbuddy.matrix.dto.project.FileNode;
+import com.workbuddy.matrix.dto.project.FileTreeResponse;
 import com.workbuddy.matrix.entity.Project;
 import com.workbuddy.matrix.entity.ProjectFile;
 import com.workbuddy.matrix.entity.User;
@@ -43,9 +44,10 @@ public class ProjectFileServiceImp implements ProjectFileService {
     private String bucketName;
 
     @Override
-    public List<FileNode> getFileTree(Long projectId) {
+    public FileTreeResponse getFileTree(Long projectId) {
         List<ProjectFile> projectFiles = projectFileRepository.findByProjectId(projectId);
-        return projectFileMapper.toListOfFileNode(projectFiles);
+        List<FileNode> fileNodes = projectFileMapper.toListOfFileNode(projectFiles);
+        return new FileTreeResponse(fileNodes);
     }
 
     @Override

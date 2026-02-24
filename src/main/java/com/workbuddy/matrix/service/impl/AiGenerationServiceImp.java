@@ -1,5 +1,6 @@
 package com.workbuddy.matrix.service.impl;
 
+import com.workbuddy.matrix.dto.chat.StreamResponse;
 import com.workbuddy.matrix.entity.*;
 import com.workbuddy.matrix.enums.ChatEventType;
 import com.workbuddy.matrix.enums.MessageRole;
@@ -47,7 +48,7 @@ public class AiGenerationServiceImp implements AiGenerationService {
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
-    public Flux<String> stremResponse(String userMessage, Long projectId) {
+    public Flux<StreamResponse> stremResponse(String userMessage, Long projectId) {
         Long userId = authUtil.getCurrentUserId();
         ChatSession chatSession = createChatSessionIfNotExists(userId,projectId);
 
@@ -96,9 +97,10 @@ public class AiGenerationServiceImp implements AiGenerationService {
                     });
                 })
                 .doOnError(error -> log.error("Error during streaming for project",error))
-                .map(chatResponse -> Objects.requireNonNull(
-                        chatResponse.getResult().getOutput().getText())
-                );
+                .map(chatResponse -> {
+                    String text = chatResponse.getResult().getOutput().getText();
+                    return new StreamResponse(text);
+                });
     }
 
     private void finalizeChats(String userMessage, ChatSession chatSession, String fullText, Long duration, Usage usage) {
