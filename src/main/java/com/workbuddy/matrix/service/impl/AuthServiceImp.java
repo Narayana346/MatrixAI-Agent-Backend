@@ -46,7 +46,7 @@ public class AuthServiceImp implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.userName(), request.password())
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         User user = (User) authentication.getPrincipal();
