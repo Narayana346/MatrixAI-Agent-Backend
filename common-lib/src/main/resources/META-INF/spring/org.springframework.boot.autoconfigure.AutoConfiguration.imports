@@ -1,0 +1,2 @@
+com.workbuddy.matrixai.common_lib.security.SharedSecurityAutoConfiguration
+com.workbuddy.matrixai.common_lib.error.SharedExceptionAutoConfiguration
