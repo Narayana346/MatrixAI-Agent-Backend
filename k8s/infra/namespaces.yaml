@@ -1,0 +1,28 @@
+# k8s/infra/namespace.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: matrix-core
+
+---
+# to create a separate ns for previews
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: matrix-previews
+
+---
+# configmap for shared config values across services
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-shared-config
+  namespace: matrix-core
+data:
+  PREVIEW_DOMAIN: "agxmainserver.tailcdc66b.ts.net"
+  PREVIEW_NAMESPACE: "matrix-previews"
+  PROXY_PORT: "30082"
+  APP_FRONTEND_URL: "http://agxmainserver.tailcdc66b.ts.net:30080"
