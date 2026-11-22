@@ -6,6 +6,10 @@ spring:
     config.server.git:
       uri: git@github.com:Narayana346/MatrixAi-Agent-Configuration.git
       default-label: main
+      clone-on-start: true
+      force-pull: true
+      ignore-local-ssh-settings: true
+      strict-host-key-checking: false
 
 server.port: 8888
 
@@ -28,6 +32,10 @@ spring:
       enabled: false
     config.server.git:
       uri: git@github.com:Narayana346/MatrixAi-Agent-Configuration.git
+      clone-on-start: true
+      force-pull: true
+      ignore-local-ssh-settings: true
+      strict-host-key-checking: false
 
 eureka:
   client:

@@ -24,6 +24,15 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: k8s
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_IGNORE_LOCAL_SSH_SETTINGS
+              value: "true"
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_STRICT_HOST_KEY_CHECKING
+              value: "false"
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: CONFIG_GIT_PRIVATE_KEY
           resources:
             requests:
               cpu: 100m
