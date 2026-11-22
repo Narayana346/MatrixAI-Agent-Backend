@@ -1,6 +1,7 @@
 package com.workbuddy.matrixai.intelligence_service.llm;
 
 import com.workbuddy.matrixai.common_lib.dto.FileNode;
+import com.workbuddy.matrixai.common_lib.security.AuthUtil;
 import com.workbuddy.matrixai.intelligence_service.client.WorkspaceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,18 +26,20 @@ import java.util.Map;
 public class FileTreeContextAdvisor implements StreamAdvisor {
 
     private final WorkspaceClient workspaceClient;
+    private final AuthUtil authUtil;
 
     @Override
     public Flux<ChatClientResponse> adviseStream(ChatClientRequest request, StreamAdvisorChain streamAdvisorChain) {
         Map<String, Object> context = request.context();
         Long projectId = Long.parseLong(context.getOrDefault("projectId", 0).toString());
+        String jwtToken = (String) context.get("jwtToken");
 
-        ChatClientRequest augmentedChatClientRequest = augmentRequestWithFileTree(request, projectId);
+        ChatClientRequest augmentedChatClientRequest = augmentRequestWithFileTree(request, projectId, jwtToken);
 
         return streamAdvisorChain.nextStream(augmentedChatClientRequest);
     }
 
-    private ChatClientRequest augmentRequestWithFileTree(ChatClientRequest request, Long projectId) {
+    private ChatClientRequest augmentRequestWithFileTree(ChatClientRequest request, Long projectId, String jwtToken) {
 
         List<Message> incomingMessages = request.prompt().getInstructions();
 
@@ -56,7 +59,7 @@ public class FileTreeContextAdvisor implements StreamAdvisor {
             allMessages.add(systemMessage);
         }
 
-        List<FileNode> fileTree = workspaceClient.getFileTree(projectId).files();
+        List<FileNode> fileTree = authUtil.runAs(jwtToken, () -> workspaceClient.getFileTree(projectId)).files();
         String fileTreeContext = "\n\n ---- FILE_TREE ----\n"+fileTree.toString();
         allMessages.add(new SystemMessage(fileTreeContext));
 

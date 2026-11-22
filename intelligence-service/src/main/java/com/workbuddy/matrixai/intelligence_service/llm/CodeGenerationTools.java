@@ -1,5 +1,6 @@
 package com.workbuddy.matrixai.intelligence_service.llm;
 
+import com.workbuddy.matrixai.common_lib.security.AuthUtil;
 import com.workbuddy.matrixai.intelligence_service.client.WorkspaceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ public class CodeGenerationTools {
 
     private final Long projectId;
     private final WorkspaceClient workspaceClient;
+    private final AuthUtil authUtil;
+    private final String jwtToken;
 
     @Tool(name = "read_files",
             description = "Read the content of files. Only input the file names present inside the FILE_TREE. DO NOT input any path which is not present under the FILE_TREE.")
@@ -30,7 +33,7 @@ public class CodeGenerationTools {
 
             log.info("Requested file: {}", cleanPath);
 
-            String content = workspaceClient.getFileContent(projectId, cleanPath);
+            String content = authUtil.runAs(jwtToken, () -> workspaceClient.getFileContent(projectId, cleanPath));
 
             result.add(String.format(
                     "--- START OF FILE: %s ---\n%s\n--- END OF FILE ---",

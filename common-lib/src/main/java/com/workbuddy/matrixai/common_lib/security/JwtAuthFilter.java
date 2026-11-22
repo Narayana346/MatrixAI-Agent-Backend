@@ -24,28 +24,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        try {
-            log.info("incoming request: {}", request.getRequestURI());
+        log.info("incoming request: {}", request.getRequestURI());
 
-            final String requestHeaderToken = request.getHeader("Authorization");
-            if (requestHeaderToken == null || !requestHeaderToken.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
+        final String requestHeaderToken = request.getHeader("Authorization");
+        if (requestHeaderToken != null && requestHeaderToken.startsWith("Bearer ")) {
             String jwtToken = requestHeaderToken.split("Bearer ")[1];
 
-            JwtUserPrincipal user = authUtil.verifyAccessToken(jwtToken);
-            if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                        user, jwtToken, user.authorities()
-                );
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            // Only JWT verification itself is guarded here. filterChain.doFilter() must stay
+            // outside this try: it runs the whole rest of the request (controller, service,
+            // repository), and catching that too would swallow unrelated exceptions (e.g.
+            // business errors) that GlobalExceptionHandler is meant to turn into real
+            // responses, resulting in a silent empty 200 instead of the real error.
+            try {
+                JwtUserPrincipal user = authUtil.verifyAccessToken(jwtToken);
+                if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                            user, jwtToken, user.authorities()
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
+            } catch (Exception e) {
+                handlerExceptionResolver.resolveException(request, response, null, e);
+                return;
             }
-
-            filterChain.doFilter(request, response);
-        } catch (Exception e) {
-            handlerExceptionResolver.resolveException(request, response, null, e);
         }
+
+        filterChain.doFilter(request, response);
     }
 }

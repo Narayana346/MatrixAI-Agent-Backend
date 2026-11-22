@@ -33,20 +33,27 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final PlanRepository planRepository;
 
     private final Integer FREE_TIER_PROJECTS_ALLOWED = 100;
+    private final Integer FREE_TIER_TOKENS_PER_DAY = 50000;
 
 
     @Override
     public SubscriptionResponse getCurrentSubscription() {
         Long userId = authUtil.getCurrentUserId();
 
-        var currentSubscription = subscriptionRepository.findByUserIdAndStatusIn(userId, Set.of(
+        return subscriptionRepository.findByUserIdAndStatusIn(userId, Set.of(
                 SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE,
                 SubscriptionStatus.TRIALING
-        )).orElse(
-                new Subscription()
-        );
+        ))
+                .map(subscriptionMapper::toSubscriptionResponse)
+                .orElseGet(this::defaultFreeTierSubscription);
+    }
 
-        return subscriptionMapper.toSubscriptionResponse(currentSubscription);
+    // Users with no active subscription fall back to the free tier rather than
+    // a null plan, which otherwise NPEs every caller that reads plan.maxProjects()/
+    // maxTokensPerDay()/unlimitedAi() (workspace-service, intelligence-service).
+    private SubscriptionResponse defaultFreeTierSubscription() {
+        PlanDto freePlan = new PlanDto(null, "Free", FREE_TIER_PROJECTS_ALLOWED, FREE_TIER_TOKENS_PER_DAY, false, "0");
+        return new SubscriptionResponse(freePlan, "FREE", null, 0L);
     }
 
     @Override

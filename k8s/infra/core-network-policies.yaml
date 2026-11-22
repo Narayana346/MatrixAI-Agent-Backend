@@ -41,24 +41,24 @@ spec:
           port: 9000
 
 ---
-# 3. NEW POLICY: Allow NGINX Ingress to talk to API Gateway and Proxy
+# 3. Allow public NodePort/Tailscale traffic to reach the public-facing services.
+# This cluster exposes these pods directly via NodePort (no ingress-nginx controller
+# is deployed here), so the external entry point IS 0.0.0.0/0, not an ingress namespace.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-nginx-ingress
+  name: allow-public-nodeport
   namespace: matrix-core
 spec:
-  # This applies to the services Nginx needs to reach
+  # This applies to the services exposed externally via NodePort
   podSelector:
     matchExpressions:
       - key: app
         operator: In
-        values: ["api-gateway", "matrix-me-proxy", "matrix-frontend"] # Add any other services that need to be exposed via Ingress
+        values: ["api-gateway", "matrix-me-proxy", "matrix-frontend"] # Add any other services that need to be exposed externally
   policyTypes:
     - Ingress
   ingress:
-    # Allow traffic FROM the ingress-nginx namespace
     - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+        - ipBlock:
+            cidr: 0.0.0.0/0

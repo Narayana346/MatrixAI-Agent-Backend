@@ -25,9 +25,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
@@ -43,6 +46,8 @@ import java.util.regex.Pattern;
 public class AiGenerationServiceImpl implements AiGenerationService {
 
     private final ChatClient chatClient;
+    @Qualifier("fallbackChatClient")
+    private final ChatClient fallbackChatClient;
     private final AuthUtil authUtil;
     private final FileTreeContextAdvisor fileTreeContextAdvisor;
     private final ChatSessionRepository chatSessionRepository;
@@ -56,26 +61,55 @@ public class AiGenerationServiceImpl implements AiGenerationService {
 
     @Override
     @PreAuthorize("@security.canEditProject(#projectId)")
-    public Flux<StreamResponse> streamResponse(String userMessage, Long projectId) {
+    public Flux<StreamResponse> streamResponse(String userMessage, Long projectId, String selectedModel) {
 
 //        usageService.checkDailyTokensUsage();
 
         Long userId = authUtil.getCurrentUserId();
+        // Captured here, on the authenticated request thread, and threaded explicitly into
+        // the advisor/tools below — they may run on a different thread once the reactive
+        // pipeline is subscribed, where SecurityContextHolder's ThreadLocal would be empty.
+        String jwtToken = authUtil.getCurrentToken();
         ChatSession chatSession = createChatSessionIfNotExists(projectId, userId);
 
         Map<String, Object> advisorParams = Map.of(
                 "userId", userId,
-                "projectId", projectId
+                "projectId", projectId,
+                "jwtToken", jwtToken
         );
 
-        StringBuilder fullResponseBuffer = new StringBuilder();
-        CodeGenerationTools codeGenerationTools = new CodeGenerationTools(projectId, workspaceClient);
+        CodeGenerationTools codeGenerationTools = new CodeGenerationTools(projectId, workspaceClient, authUtil, jwtToken);
 
+        StringBuilder fullResponseBuffer = new StringBuilder();
         AtomicReference<Long> startTime = new AtomicReference<>(System.currentTimeMillis());
         AtomicReference<Long> endTime = new AtomicReference<>(0L);
         AtomicReference<Usage> usageRef = new AtomicReference<>();
 
-        return chatClient.prompt()
+        return streamFrom(chatClient, selectedModel, userMessage, projectId, advisorParams, codeGenerationTools,
+                chatSession, userId, fullResponseBuffer, startTime, endTime, usageRef)
+                .onErrorResume(error -> {
+                    // Only retry on the fallback model if the primary one failed before
+                    // producing any output (e.g. an upfront 429) — restarting after a
+                    // partial stream would duplicate/garble what the user already saw.
+                    if (fullResponseBuffer.length() > 0) {
+                        return Flux.error(error);
+                    }
+                    log.warn("Primary chat model failed for projectId {} ({}), retrying with fallback model", projectId, error.getMessage());
+                    startTime.set(System.currentTimeMillis());
+                    endTime.set(0L);
+                    // The fallback client always uses its own dedicated low-latency model,
+                    // regardless of what the user selected — that's the whole point of a fallback.
+                    return streamFrom(fallbackChatClient, null, userMessage, projectId, advisorParams, codeGenerationTools,
+                            chatSession, userId, fullResponseBuffer, startTime, endTime, usageRef);
+                });
+    }
+
+    private Flux<StreamResponse> streamFrom(ChatClient client, String modelOverride, String userMessage, Long projectId,
+                                             Map<String, Object> advisorParams, CodeGenerationTools codeGenerationTools,
+                                             ChatSession chatSession, Long userId, StringBuilder fullResponseBuffer,
+                                             AtomicReference<Long> startTime, AtomicReference<Long> endTime,
+                                             AtomicReference<Usage> usageRef) {
+        ChatClient.ChatClientRequestSpec requestSpec = client.prompt()
                 .system(PromptUtils.CODE_GENERATION_SYSTEM_PROMPT)
                 .user(userMessage)
                 .tools(codeGenerationTools)
@@ -83,7 +117,13 @@ public class AiGenerationServiceImpl implements AiGenerationService {
                             advisorSpec.params(advisorParams);
                             advisorSpec.advisors(fileTreeContextAdvisor);
                         }
-                )
+                );
+
+        if (StringUtils.hasText(modelOverride)) {
+            requestSpec = requestSpec.options(OpenAiChatOptions.builder().model(modelOverride).build());
+        }
+
+        return requestSpec
                 .stream()
                 .chatResponse()
                 .doOnNext(response -> {
@@ -96,7 +136,13 @@ public class AiGenerationServiceImpl implements AiGenerationService {
                         if(response.getMetadata().getUsage() != null) {
                             usageRef.set(response.getMetadata().getUsage());
                         }
-                        fullResponseBuffer.append(content);
+                        // StringBuilder#append(null) writes the literal text "null" rather than
+                        // doing nothing, which would otherwise make an empty/role-only preamble
+                        // chunk look like real content (e.g. to the fallback's "did we already
+                        // produce output" check below).
+                        if (content != null) {
+                            fullResponseBuffer.append(content);
+                        }
                     }
 
                 })
