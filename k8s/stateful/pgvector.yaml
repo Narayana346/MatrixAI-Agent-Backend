@@ -53,6 +53,12 @@ spec:
       labels:
         app: pgvector
     spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        appArmorProfile:
+          type: Unconfined
       containers:
         - name: pgvector
           image: pgvector/pgvector:pg16
@@ -87,11 +93,11 @@ spec:
                   key: INTELLIGENCE_DB_PASSWORD
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: 250m
+              cpu: 500m
               memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 1Gi
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data
