@@ -59,6 +59,7 @@ metadata:
   name: minio
   namespace: matrix-core
 spec:
+  clusterIP: None   # headless — required for StatefulSet DNS
   selector:
     app: minio
   ports:
