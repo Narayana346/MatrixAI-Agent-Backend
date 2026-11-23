@@ -17,6 +17,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -68,6 +69,7 @@ public class ProjectFileServiceImpl implements ProjectFileService {
 
     @Override
     @Transactional
+    @PreAuthorize("@security.canEditProject(#projectId)")
     public void saveFile(Long projectId, String path, String content) {
         Project project = projectRepository.findById(projectId).orElseThrow(
                 () -> new ResourceNotFoundException("Project", projectId.toString())

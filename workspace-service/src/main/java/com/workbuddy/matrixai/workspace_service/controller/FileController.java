@@ -1,8 +1,10 @@
 package com.workbuddy.matrixai.workspace_service.controller;
 
 import com.workbuddy.matrixai.common_lib.dto.FileTreeDto;
+import com.workbuddy.matrixai.workspace_service.dto.project.FileContentRequest;
 import com.workbuddy.matrixai.workspace_service.dto.project.FileContentResponse;
 import com.workbuddy.matrixai.workspace_service.service.ProjectFileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +26,14 @@ public class FileController {
             @PathVariable Long projectId,
             @RequestParam String path) {
         return ResponseEntity.ok(projectFileService.getFileContent(projectId, path));
+    }
+
+    @PutMapping("/content")
+    public ResponseEntity<Void> saveFile(
+            @PathVariable Long projectId,
+            @RequestBody @Valid FileContentRequest request) {
+        projectFileService.saveFile(projectId, request.path(), request.content());
+        return ResponseEntity.noContent().build();
     }
 
 }
