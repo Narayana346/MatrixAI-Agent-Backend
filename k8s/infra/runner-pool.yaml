@@ -15,6 +15,14 @@ spec:
         app: runner
         status: idle
     spec:
+      # Without this, the host's default AppArmor profile silently blocks signal
+      # delivery between processes in the same container (confirmed earlier on
+      # pgvector — same root cause) — it would otherwise randomly break the
+      # nohup/background-process management this pod relies on (npm run dev, mc
+      # mirror --watch).
+      securityContext:
+        appArmorProfile:
+          type: Unconfined
       volumes:
         - name: workspace
           emptyDir: {}
@@ -37,9 +45,13 @@ spec:
               memory: "1Gi"
               cpu: "500m"
 
-        # 2. THE SYNCER (MinIO mc)
+        # 2. THE SYNCER (MinIO mc client).
+        # minio/mc was discontinued on Docker Hub (and MinIO's direct binary
+        # downloads were also pulled, 410 Gone) — narayana345/mc-client is `mc`
+        # built directly from the official github.com/minio/mc source via
+        # `go install`, since no official pre-built image remains available.
         - name: syncer
-          image: minio/mc
+          image: narayana345/mc-client:latest
           command: ["/bin/sh", "-c", "sleep infinity"]
           env:
             - name: MINIO_USER

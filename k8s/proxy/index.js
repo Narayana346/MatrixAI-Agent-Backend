@@ -56,7 +56,7 @@ const server = http.createServer(async (req, res) => {
         return res.end('Unknown route. Expected /previews/<id>/...');
     }
 
-    const { previewId, rest } = parsed;
+    const { previewId } = parsed;
     const targetIpOrSvc = await getTarget(previewId);
 
     if (!targetIpOrSvc) {
@@ -65,7 +65,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     const target = getTargetUrl(targetIpOrSvc);
-    req.url = rest;
+    // Vite is started with --base /previews/<id>/ (so its own emitted asset/HMR
+    // paths are correct), which means it expects to receive that prefix intact,
+    // not stripped — forward req.url unchanged.
     console.log(`HTTP: ${previewId} -> ${target}${req.url}`);
 
     proxy.web(req, res, { target }, (e) => {
@@ -84,12 +86,12 @@ server.on('upgrade', async (req, socket, head) => {
         return socket.destroy();
     }
 
-    const { previewId, rest } = parsed;
+    const { previewId } = parsed;
     const targetIpOrSvc = await getTarget(previewId);
 
     if (targetIpOrSvc) {
         const target = getTargetUrl(targetIpOrSvc);
-        req.url = rest;
+        // Same reasoning as the HTTP handler above: forward req.url unchanged.
         console.log(`WS: ${previewId} -> ${target}`);
 
         proxy.ws(req, socket, head, { target }, (e) => {

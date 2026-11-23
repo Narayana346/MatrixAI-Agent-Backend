@@ -91,8 +91,27 @@ public class KubernetesDeploymentServiceImpl implements DeploymentService {
             String watchCmd = String.format("nohup mc mirror --overwrite --watch myminio/projects/%d/ /app/ > /app/sync.log 2>&1 &", projectId);
             execCommand(podName, "syncer", "sh", "-c", watchCmd);
 
-            String startCmd = "npm install && nohup npm run dev -- --host 0.0.0.0 --port 5173 > /app/dev.log 2>&1 &";
+            // --base must match the proxy's path prefix: the proxy only forwards requests
+            // under /previews/<id>/..., but Vite's default config emits root-relative asset/
+            // HMR paths (/@vite/client, /src/main.tsx, ...), which the proxy 404s as unknown
+            // routes. Telling Vite its own base path makes it prefix everything it emits to
+            // match.
+            String basePath = "/previews/" + previewId + "/";
+            String startCmd = String.format(
+                    "npm install && nohup npm run dev -- --host 0.0.0.0 --port 5173 --base %s > /app/dev.log 2>&1 &",
+                    basePath);
             execCommand(podName, "runner", "sh", "-c", startCmd);
+
+            // npm install + vite startup can easily take longer than this request should
+            // block for in the worst case, so this is a best-effort wait, not a hard gate:
+            // if it's not up yet by the deadline we still register the route and return,
+            // since the pod's NetworkPolicy only allows the proxy to reach it anyway — a
+            // slightly-too-early first load just means one manual refresh, not a failure.
+            boolean ready = waitForDevServerReady(podName, basePath);
+            if (!ready) {
+                log.warn("Dev server for project {} did not become ready within the wait budget; " +
+                        "returning preview URL anyway, it may need a manual refresh.", projectId);
+            }
 
             Pod updatedPod = client.pods().inNamespace(namespace).withName(podName).get();
             registerRoute(previewId, updatedPod);
@@ -113,6 +132,58 @@ public class KubernetesDeploymentServiceImpl implements DeploymentService {
 
         redisTemplate.opsForValue().set("route:" + previewId, podIp + ":5173", 6, TimeUnit.HOURS);
         log.info("Route Registered: {} -> {}", previewId, podIp);
+    }
+
+    // Polls via exec (loopback inside the pod) rather than a direct network call, since
+    // the strict-preview-sandbox NetworkPolicy only allows ingress to runner pods from the
+    // matrix-me-proxy pod — workspace-service itself can't reach podIP:5173 directly.
+    private boolean waitForDevServerReady(String podName, String basePath) {
+        int maxAttempts = 90; // ~3 minutes at 2s intervals — npm install on this hardware
+                              // routinely runs past 60s, confirmed empirically (deploys that
+                              // timed out at 60s were serving fine ~15-20s later)
+        String checkCmd = String.format(
+                "wget -q -T 2 -O /dev/null http://localhost:5173%s && echo READY || echo NOTREADY", basePath);
+
+        for (int i = 0; i < maxAttempts; i++) {
+            try {
+                String result = execCommandCapture(podName, "runner", "sh", "-c", checkCmd);
+                if ("READY".equals(result.trim())) {
+                    return true;
+                }
+            } catch (Exception e) {
+                log.debug("Readiness check attempt {} for pod {} failed: {}", i, podName, e.getMessage());
+            }
+
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private String execCommandCapture(String podName, String container, String... command) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        CompletableFuture<String> data = new CompletableFuture<>();
+        try (ExecWatch ignored = client.pods().inNamespace(namespace).withName(podName)
+                .inContainer(container)
+                .writingOutput(out)
+                .writingError(new ByteArrayOutputStream())
+                .usingListener(new ExecListener() {
+                    @Override
+                    public void onClose(int code, String reason) {
+                        data.complete("Done");
+                    }
+                })
+                .exec(command)) {
+
+            data.get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new RuntimeException("Readiness exec failed", e);
+        }
+        return out.toString();
     }
 
     private void execCommand(String podName, String container, String... command) {
