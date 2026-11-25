@@ -1,10 +1,17 @@
 # k8s/stateful/qwen-coder-model-runner.yaml
 #
 # Docker Model Runner (DMR) running Qwen2.5-Coder-7B-Instruct (closest available
-# size to "8B" — Qwen does not publish a Coder model at exactly 8B) pulled from
-# the official Qwen GGUF repo on Hugging Face. Exposes an OpenAI-compatible API
-# under /engines/v1 on port 80.
-
+# size to "8B" — Qwen does not publish a Coder model at exactly 8B). Exposes an
+# OpenAI-compatible API under /engines/v1 on port 80.
+#
+# Pulled from bartowski's GGUF re-upload rather than the official Qwen/...-GGUF
+# repo: Qwen's own repo publishes the Q4_K_M quant three ways for the same
+# content (one consolidated file plus a redundant pre-split 2-part copy of it).
+# DMR's HF tag resolver matches all three by substring and feeds them to
+# llama.cpp as if they were one 3-part split, which fails to load with
+# "invalid split file name" since the files carry no real split.*  metadata.
+# bartowski's repo ships exactly one file per quant level, so the tag
+# resolves unambiguously.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,7 +19,7 @@ metadata:
   namespace: matrix-core
 data:
   models: |
-    hf.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M
+    hf.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
