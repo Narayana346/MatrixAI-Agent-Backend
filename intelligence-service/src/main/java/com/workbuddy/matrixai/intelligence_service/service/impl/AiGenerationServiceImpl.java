@@ -7,6 +7,7 @@ import com.workbuddy.matrixai.common_lib.error.ResourceNotFoundException;
 import com.workbuddy.matrixai.common_lib.event.FileStoreRequestEvent;
 import com.workbuddy.matrixai.common_lib.security.AuthUtil;
 import com.workbuddy.matrixai.intelligence_service.client.WorkspaceClient;
+import com.workbuddy.matrixai.intelligence_service.config.LocalModelProperties;
 import com.workbuddy.matrixai.intelligence_service.dto.chat.StreamResponse;
 import com.workbuddy.matrixai.intelligence_service.entity.ChatEvent;
 import com.workbuddy.matrixai.intelligence_service.entity.ChatMessage;
@@ -48,6 +49,9 @@ public class AiGenerationServiceImpl implements AiGenerationService {
     private final ChatClient chatClient;
     @Qualifier("fallbackChatClient")
     private final ChatClient fallbackChatClient;
+    @Qualifier("localChatClient")
+    private final ChatClient localChatClient;
+    private final LocalModelProperties localModelProperties;
     private final AuthUtil authUtil;
     private final FileTreeContextAdvisor fileTreeContextAdvisor;
     private final ChatSessionRepository chatSessionRepository;
@@ -85,7 +89,15 @@ public class AiGenerationServiceImpl implements AiGenerationService {
         AtomicReference<Long> endTime = new AtomicReference<>(0L);
         AtomicReference<Usage> usageRef = new AtomicReference<>();
 
-        return streamFrom(chatClient, selectedModel, userMessage, projectId, advisorParams, codeGenerationTools,
+        // The local model is served off a separate OpenAiChatModel pointed at a different
+        // host (see AiConfig#localChatClient), so it can't be reached by passing its id as
+        // a model override on the OpenRouter-backed primary client the way other models are.
+        boolean useLocalModel = localModelProperties.isEnabled()
+                && localModelProperties.getModelId().equals(selectedModel);
+        ChatClient targetClient = useLocalModel ? localChatClient : chatClient;
+        String modelOverride = useLocalModel ? null : selectedModel;
+
+        return streamFrom(targetClient, modelOverride, userMessage, projectId, advisorParams, codeGenerationTools,
                 chatSession, userId, fullResponseBuffer, startTime, endTime, usageRef)
                 .onErrorResume(error -> {
                     // Only retry on the fallback model if the primary one failed before

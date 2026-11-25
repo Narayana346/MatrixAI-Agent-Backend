@@ -1,5 +1,6 @@
 package com.workbuddy.matrixai.intelligence_service.controller;
 
+import com.workbuddy.matrixai.intelligence_service.config.LocalModelProperties;
 import com.workbuddy.matrixai.intelligence_service.dto.chat.ChatRequest;
 import com.workbuddy.matrixai.intelligence_service.dto.chat.ChatResponse;
 import com.workbuddy.matrixai.intelligence_service.dto.chat.StreamResponse;
@@ -14,6 +15,7 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -24,6 +26,7 @@ public class ChatController {
     private final AiGenerationService aiGenerationService;
     private final ChatService chatService;
     private final OpenRouterModelService openRouterModelService;
+    private final LocalModelProperties localModelProperties;
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<StreamResponse>> streamChat(
@@ -37,7 +40,20 @@ public class ChatController {
 
     @GetMapping("/models")
     public ResponseEntity<List<OpenRouterModelInfo>> listModels() {
-        return ResponseEntity.ok(openRouterModelService.listModels());
+        List<OpenRouterModelInfo> models = new ArrayList<>(openRouterModelService.listModels());
+
+        if (localModelProperties.isEnabled()) {
+            models.add(new OpenRouterModelInfo(
+                    localModelProperties.getModelId(),
+                    localModelProperties.getDisplayName(),
+                    localModelProperties.getContextLength(),
+                    true,
+                    0.0,
+                    0.0
+            ));
+        }
+
+        return ResponseEntity.ok(models);
     }
 
     @GetMapping("/projects/{projectId}")
