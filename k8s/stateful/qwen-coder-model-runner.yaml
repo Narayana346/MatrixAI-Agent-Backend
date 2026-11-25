@@ -1,17 +1,20 @@
 # k8s/stateful/qwen-coder-model-runner.yaml
 #
-# Docker Model Runner (DMR) running Qwen2.5-Coder-7B-Instruct (closest available
-# size to "8B" — Qwen does not publish a Coder model at exactly 8B). Exposes an
-# OpenAI-compatible API under /engines/v1 on port 80.
+# Docker Model Runner (DMR) running Llama-3.1-8B-Instruct. Exposes an
+# OpenAI-compatible API under /engines/v1 on port 80. Despite the resource
+# names (kept from the original Qwen Coder setup), it no longer serves Qwen:
+# Qwen2.5-Coder-7B and Hermes-2-Pro-Llama-3-8B were both tried for real
+# function/tool-calling and don't reliably return a structured tool_calls
+# response from this llama.cpp build — Llama-3.1's chat template is the one
+# with working {% if tools %} support. See LocalModelProperties for details.
 #
-# Pulled from bartowski's GGUF re-upload rather than the official Qwen/...-GGUF
-# repo: Qwen's own repo publishes the Q4_K_M quant three ways for the same
-# content (one consolidated file plus a redundant pre-split 2-part copy of it).
-# DMR's HF tag resolver matches all three by substring and feeds them to
-# llama.cpp as if they were one 3-part split, which fails to load with
-# "invalid split file name" since the files carry no real split.*  metadata.
-# bartowski's repo ships exactly one file per quant level, so the tag
-# resolves unambiguously.
+# IMPORTANT: Llama-3.1's GGUF declares a 131072-token native context, which
+# DMR sizes the KV cache to directly from the file (~16GiB) — enough to OOM
+# this pod outright. The cached blob on the PVC has had its embedded
+# llama.context_length metadata binary-patched to 32768 to fix this (patched
+# in place at /models/bundles/sha256/<hash>/model/model.gguf, offset found by
+# parsing the GGUF header). If this blob is ever deleted/re-pulled, the patch
+# is lost and must be reapplied by hand before the pod will run safely.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -19,7 +22,7 @@ metadata:
   namespace: matrix-core
 data:
   models: |
-    hf.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M
+    hf.co/unsloth/Llama-3.1-8B-Instruct-GGUF:Q4_K_M
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -71,7 +74,6 @@ spec:
               cpu: 1000m
               memory: 8Gi
             limits:
-              cpu: 2000m
               memory: 16Gi
           readinessProbe:
             httpGet:
